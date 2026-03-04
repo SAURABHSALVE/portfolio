@@ -1,0 +1,540 @@
+// Each content block: { type, text?, items?, lang? }
+// type: 'h2' | 'h3' | 'p' | 'code' | 'highlight' | 'list' | 'tip'
+
+export const BLOG_POSTS = [
+  /* ── FEATURED ─────────────────────────────────────────────────────── */
+  {
+    slug: 'agentic-image-studio-architecture',
+    title: 'Building a 9-Agent AI Image Studio: Architecture & Lessons',
+    category: 'GenAI',
+    tags: ['Multi-Agent', 'PyTorch', 'Diffusers', 'LCM', 'Stable Diffusion'],
+    date: 'Mar 2025',
+    readTime: '12 min read',
+    featured: true,
+    excerpt:
+      'How I architected a multi-agent system that orchestrates prompt refinement, quality control, and iterative improvement — and why Latent Consistency Models changed everything about inference speed.',
+    stats: [
+      { num: '10x', label: 'Inference speedup via LCM' },
+      { num: '9', label: 'Specialized agents designed' },
+    ],
+    content: [
+      { type: 'highlight', text: 'This post is a deep-dive into the architecture of my Agentic AI Image Studio — a system of 9 cooperating agents that generates, evaluates, and improves images autonomously.' },
+      { type: 'h2', text: 'Why Multi-Agent for Image Generation?' },
+      { type: 'p', text: 'A single prompt-to-image call is fragile. You get one shot at a good result. If the prompt is ambiguous, the seed is unlucky, or the quality metric is off — you loop manually. That loop is exactly what agents are good at automating.' },
+      { type: 'p', text: 'The idea came from LangChain\'s agent loop: a planner decides what tool to call, the tool runs, the result feeds back. I adapted that loop specifically for image generation with Stable Diffusion, adding specialized agents for each concern instead of one monolithic runner.' },
+      { type: 'h2', text: 'The 9-Agent Architecture' },
+      { type: 'h3', text: '1. Prompt Refiner Agent' },
+      { type: 'p', text: 'Accepts raw user input and enriches it using a local LLM (or GPT-4). Adds art style descriptors, lighting cues, composition keywords, and negative prompt hints. This single step improved output consistency dramatically.' },
+      { type: 'code', lang: 'python', text: `def refine_prompt(raw: str, style: str = "photorealistic") -> dict:
+    system = "You are an expert prompt engineer for Stable Diffusion."
+    user = f"""Improve this prompt for {style} image generation.
+Raw: {raw}
+Return JSON: {{"positive": "...", "negative": "...", "style_tags": [...]}}"""
+    response = openai.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "system", "content": system},
+                  {"role": "user", "content": user}],
+        response_format={"type": "json_object"}
+    )
+    return json.loads(response.choices[0].message.content)` },
+      { type: 'h3', text: '2. Style Analyzer Agent' },
+      { type: 'p', text: 'Takes the refined prompt and classifies the intended visual style (photorealistic, anime, oil painting, etc.). This drives model selection — different LoRA weights are loaded depending on the style bucket.' },
+      { type: 'h3', text: '3. Negative Prompt Generator' },
+      { type: 'p', text: 'A dedicated agent for negative prompts. It pulls from a curated library of universal negatives (blurry, deformed hands, watermark...) and adds style-specific negatives. Keeping this separate makes the negative prompt maintainable and extensible.' },
+      { type: 'h3', text: '4. Seed Manager Agent' },
+      { type: 'p', text: 'Manages seed selection and variation strategy. For first generation, it picks 4 diverse seeds. After quality evaluation, it perturbs the best seed ±50 to explore nearby latent space — a technique I borrowed from evolutionary algorithms.' },
+      { type: 'h3', text: '5. Quality Control Agent' },
+      { type: 'p', text: 'Evaluates each generated image using CLIP score (text-image alignment) and a lightweight aesthetic scorer (LAION aesthetic predictor). Images below threshold are flagged for regeneration. This closed the feedback loop.' },
+      { type: 'code', lang: 'python', text: `def evaluate_image(image: PIL.Image, prompt: str) -> dict:
+    # CLIP alignment score
+    inputs = clip_processor(text=[prompt], images=image, return_tensors="pt")
+    outputs = clip_model(**inputs)
+    clip_score = outputs.logits_per_image.item()
+
+    # Aesthetic score (LAION aesthetic predictor)
+    aesthetic_score = aesthetic_model(preprocess(image).unsqueeze(0)).item()
+
+    return {
+        "clip_score": clip_score,
+        "aesthetic_score": aesthetic_score,
+        "passed": clip_score > 0.28 and aesthetic_score > 5.5
+    }` },
+      { type: 'h3', text: '6. Iteration Agent (Orchestrator)' },
+      { type: 'p', text: 'The brain of the system. It reads quality reports, decides whether to regenerate, refine the prompt, or switch style. It runs up to 3 iteration cycles before returning the best result. This is where the "agentic" behaviour really happens.' },
+      { type: 'h3', text: '7. Cache Manager Agent' },
+      { type: 'p', text: 'Maintains a prompt hash → image cache. Before any generation, the cache is checked. This reduced redundant GPU calls by ~30% during development.' },
+      { type: 'h3', text: '8. Format Converter Agent' },
+      { type: 'p', text: 'Handles output format: PNG, JPEG at specified quality, WebP, or base64-encoded string for API responses. Decouples format concerns from generation logic.' },
+      { type: 'h3', text: '9. Metadata Agent' },
+      { type: 'p', text: 'Embeds generation metadata (prompt, seed, model, timestamp, scores) into the image EXIF data. Essential for reproducibility — I could always recreate any output exactly.' },
+      { type: 'h2', text: 'Why LCM Changed Everything' },
+      { type: 'p', text: 'Standard Stable Diffusion requires 20–50 denoising steps per image. At 30 steps on a single T4 GPU, that\'s ~8 seconds per 512×512 image. With 4 seeds per iteration cycle × 3 cycles, each generation request could take over 2 minutes. Unusable.' },
+      { type: 'p', text: 'Latent Consistency Models (LCM) distill the diffusion process into 4–8 steps while preserving quality. The result: ~0.7 seconds per image. The agent loop went from minutes to under 15 seconds end-to-end.' },
+      { type: 'code', lang: 'python', text: `from diffusers import LCMScheduler, AutoPipelineForText2Image
+
+pipe = AutoPipelineForText2Image.from_pretrained(
+    "stabilityai/stable-diffusion-xl-base-1.0",
+    torch_dtype=torch.float16
+)
+pipe.scheduler = LCMScheduler.from_config(pipe.scheduler.config)
+pipe.load_lora_weights("latent-consistency/lcm-lora-sdxl")
+pipe.fuse_lora()
+
+# 4-8 steps vs 30-50 for standard SD
+image = pipe(prompt, num_inference_steps=4, guidance_scale=1.0).images[0]` },
+      { type: 'highlight', text: 'The key insight: LCM guidance_scale should be 1.0–2.0 (not the 7.5 default). Higher values cause over-saturation. This took me a full day to debug.' },
+      { type: 'h2', text: 'Results & Benchmarks' },
+      { type: 'list', items: [
+        'Average end-to-end generation time: 13.2 seconds (vs ~140s with standard SD)',
+        'CLIP score improvement after prompt refinement: +18% average',
+        'Quality pass rate on first iteration: 71% — remaining 29% resolved in iteration 2',
+        'Cache hit rate after warm-up: 34% (significant GPU savings during demos)',
+      ]},
+      { type: 'h2', text: 'Key Lessons' },
+      { type: 'list', items: [
+        'Agent boundaries matter: each agent should do exactly one thing. Combining prompt refinement and quality evaluation into one agent made debugging a nightmare.',
+        'Async execution for parallel seeds: generating 4 seeds sequentially was wasteful. asyncio + thread pools cut that to near-single-seed time.',
+        'LCM is not free: quality at 4 steps is slightly lower than 30-step SD. For casual use it\'s fine; for print-quality, you still need more steps.',
+        'Cache invalidation is hard even with a hash — prompt normalization (lowercase, strip, sort tags) was essential to get real cache hits.',
+      ]},
+    ],
+  },
+
+  /* ── POST 01 ───────────────────────────────────────────────────────── */
+  {
+    slug: 'rag-production-youtube-bot',
+    title: 'RAG in Production: What I Learned Building the YouTube Bot',
+    category: 'GenAI',
+    tags: ['RAG', 'LangChain', 'FAISS', 'OpenAI', 'Streamlit'],
+    date: 'Jan 2025',
+    readTime: '6 min read',
+    featured: false,
+    excerpt:
+      'The real challenges of building a RAG pipeline that handles PDF knowledge bases + live web search — chunking strategies, FAISS indexing, and getting LangChain agents to actually work reliably.',
+    content: [
+      { type: 'highlight', text: 'RAG sounds simple in tutorials. In production it exposes a dozen sharp edges. Here\'s what I actually hit building the YouTube Bot RAG agent.' },
+      { type: 'h2', text: 'The Problem with Naive RAG' },
+      { type: 'p', text: 'Most tutorials show you: load PDF → split into chunks → embed → store → query. This works for demos. It breaks in production for three reasons: chunking strategy is wrong, retrieval returns irrelevant context, and there\'s no fallback when the knowledge base doesn\'t have the answer.' },
+      { type: 'h2', text: 'Chunking Strategy: The Most Underrated Decision' },
+      { type: 'p', text: 'I started with fixed-size 1000-character chunks with 200-character overlap. Retrieval was terrible — chunks would cut through sentences mid-thought, breaking semantic coherence.' },
+      { type: 'p', text: 'Switching to `RecursiveCharacterTextSplitter` with 512 tokens and 50-token overlap, prioritising splits at paragraph boundaries (`\\n\\n`), then sentences (`.`), then words — improved retrieval quality measurably.' },
+      { type: 'code', lang: 'python', text: `from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+splitter = RecursiveCharacterTextSplitter(
+    chunk_size=512,
+    chunk_overlap=50,
+    separators=["\\n\\n", "\\n", ". ", " ", ""],
+    length_function=len,
+)
+chunks = splitter.split_documents(docs)` },
+      { type: 'h2', text: 'FAISS: Right Config Matters' },
+      { type: 'p', text: 'Default FAISS `IndexFlatL2` is fine for small corpora (<10K vectors). For larger knowledge bases, switch to `IndexIVFFlat` with `nlist=100` clusters. The difference in query time is significant at scale.' },
+      { type: 'p', text: 'Always normalise embeddings before storing (`text-embedding-ada-002` returns unit vectors, so cosine and L2 are equivalent — but other models don\'t). I added explicit L2 normalisation to be safe.' },
+      { type: 'h2', text: 'Hybrid Retrieval: Vector + Keyword' },
+      { type: 'p', text: 'Pure vector search misses exact keyword matches. A query for "GPT-4 pricing" might retrieve semantically similar content about "LLM cost comparison" but miss the exact pricing table. I implemented a simple keyword filter as a pre-step:' },
+      { type: 'list', items: [
+        'Run BM25 keyword search over chunk texts → top 20 results',
+        'Run FAISS vector search → top 20 results',
+        'Re-rank the union using Reciprocal Rank Fusion (RRF)',
+        'Pass top 5 to the LLM',
+      ]},
+      { type: 'h2', text: 'The Live Web Search Fallback' },
+      { type: 'p', text: 'When retrieval confidence is low (CLIP-style relevance score < 0.7), the agent falls back to Tavily API for real-time web search. This is the key feature that makes the bot useful for questions beyond the knowledge base.' },
+      { type: 'code', lang: 'python', text: `from langchain_community.tools.tavily_search import TavilySearchResults
+
+tools = [
+    retriever_tool,  # FAISS-backed
+    TavilySearchResults(max_results=3, search_depth="advanced"),
+]
+
+agent = create_react_agent(llm, tools, prompt)
+agent_executor = AgentExecutor(
+    agent=agent, tools=tools,
+    verbose=True, handle_parsing_errors=True,
+    max_iterations=5,
+)` },
+      { type: 'h2', text: 'What I\'d Do Differently' },
+      { type: 'list', items: [
+        'Add a query rewriting step before retrieval (LLM rewrites the user question for better embedding match)',
+        'Use a cross-encoder re-ranker (e.g., ms-marco-MiniLM) instead of RRF',
+        'Implement confidence scoring to know when NOT to answer (hallucination prevention)',
+        'Cache embeddings to disk — re-embedding on every restart costs time and money',
+      ]},
+    ],
+  },
+
+  /* ── POST 02 ───────────────────────────────────────────────────────── */
+  {
+    slug: 'ann-vs-cnn-vs-procnn-mnist',
+    title: 'ANN vs CNN vs ProCNN: A Practical Comparison on MNIST',
+    category: 'Machine Learning',
+    tags: ['PyTorch', 'CNN', 'ANN', 'Deep Learning', 'Streamlit'],
+    date: 'Dec 2024',
+    readTime: '8 min read',
+    featured: false,
+    excerpt:
+      'I trained three architectures on the same dataset and tracked everything — accuracy, confusion matrices, inference time. Here\'s what the numbers actually mean and when to use each.',
+    content: [
+      { type: 'highlight', text: 'Not all neural networks are created equal. Even on MNIST — arguably the "Hello World" of deep learning — architecture choices matter more than most tutorials suggest.' },
+      { type: 'h2', text: 'Setup' },
+      { type: 'p', text: 'MNIST: 60,000 training images, 10,000 test images, 28×28 grayscale, 10 classes. Same training loop for all three models: Adam optimizer, lr=0.001, 20 epochs, batch size 64, CrossEntropyLoss. No data augmentation (intentional — I wanted to isolate architecture effects).' },
+      { type: 'h2', text: 'Architecture 1: ANN (Fully Connected)' },
+      { type: 'p', text: 'The simplest approach: flatten the 784-pixel image and pass through dense layers.' },
+      { type: 'code', lang: 'python', text: `class ANN(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(784, 256), nn.ReLU(),
+            nn.Linear(256, 128), nn.ReLU(),
+            nn.Linear(128, 64),  nn.ReLU(),
+            nn.Linear(64, 10)
+        )
+    def forward(self, x): return self.net(x)` },
+      { type: 'p', text: 'Result: 97.8% test accuracy. Trains fast (8s/epoch on CPU). The bottleneck: it treats each pixel independently. Spatial relationships between neighbouring pixels are lost in the flatten operation.' },
+      { type: 'h2', text: 'Architecture 2: CNN' },
+      { type: 'p', text: 'Convolutional layers exploit spatial locality — nearby pixels are processed together by the same filter.' },
+      { type: 'code', lang: 'python', text: `class CNN(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.features = nn.Sequential(
+            nn.Conv2d(1, 32, 3, padding=1), nn.ReLU(),
+            nn.MaxPool2d(2),
+            nn.Conv2d(32, 64, 3, padding=1), nn.ReLU(),
+            nn.MaxPool2d(2),
+        )
+        self.classifier = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(64 * 7 * 7, 128), nn.ReLU(),
+            nn.Linear(128, 10)
+        )
+    def forward(self, x):
+        return self.classifier(self.features(x))` },
+      { type: 'p', text: 'Result: 99.1% test accuracy. Trains slower (22s/epoch on CPU) but the accuracy jump is real. Filter visualisations show learned edge detectors and curve detectors — meaningful features, not arbitrary pixel weights.' },
+      { type: 'h2', text: 'Architecture 3: ProCNN (Production CNN)' },
+      { type: 'p', text: 'The same CNN backbone with two additions: BatchNorm after each conv layer (training stability) and Dropout before the final classifier (regularisation).' },
+      { type: 'code', lang: 'python', text: `class ProCNN(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.features = nn.Sequential(
+            nn.Conv2d(1, 32, 3, padding=1),
+            nn.BatchNorm2d(32), nn.ReLU(),
+            nn.MaxPool2d(2),
+            nn.Conv2d(32, 64, 3, padding=1),
+            nn.BatchNorm2d(64), nn.ReLU(),
+            nn.MaxPool2d(2),
+        )
+        self.classifier = nn.Sequential(
+            nn.Flatten(),
+            nn.Dropout(0.4),
+            nn.Linear(64 * 7 * 7, 128), nn.ReLU(),
+            nn.Linear(128, 10)
+        )` },
+      { type: 'p', text: 'Result: 99.4% test accuracy. More importantly: the loss curve was smoother, and when tested with Gaussian-noised digits (simulating real-world scan quality), ProCNN degraded 60% less than plain CNN. BatchNorm acts as a normalising buffer against input distribution shift.' },
+      { type: 'h2', text: 'Results Comparison' },
+      { type: 'list', items: [
+        'ANN: 97.8% accuracy | 8s/epoch | 407K parameters',
+        'CNN: 99.1% accuracy | 22s/epoch | 421K parameters',
+        'ProCNN: 99.4% accuracy | 25s/epoch | 422K parameters',
+        'On noisy digits (+15% Gaussian noise): ANN 89%, CNN 94%, ProCNN 97%',
+      ]},
+      { type: 'h2', text: 'When to Use Each' },
+      { type: 'list', items: [
+        'ANN: tabular data, simple patterns, very limited compute',
+        'CNN: any image or spatial data where local patterns matter',
+        'ProCNN (CNN + BN + Dropout): production models, noisy real-world inputs, when you need the model to generalise beyond the training distribution',
+      ]},
+      { type: 'tip', text: 'Lesson: BatchNorm is almost always worth adding. The training time overhead is minimal, but stability and noise robustness gains are real. Make it the default.' },
+    ],
+  },
+
+  /* ── POST 03 ───────────────────────────────────────────────────────── */
+  {
+    slug: 'resnet50-fastapi-docker-deployment',
+    title: 'Deploying a ResNet50 API with Docker + FastAPI — End to End',
+    category: 'Cloud / MLOps',
+    tags: ['FastAPI', 'Docker', 'ResNet50', 'PyTorch', 'Computer Vision'],
+    date: 'Nov 2024',
+    readTime: '10 min read',
+    featured: false,
+    excerpt:
+      'A full walkthrough of containerizing a PyTorch ResNet50 model, serving it via FastAPI, optimizing the preprocessing pipeline for concurrency, and getting 98% accuracy in production.',
+    content: [
+      { type: 'highlight', text: 'Training a model that achieves 98% accuracy locally means nothing if it crashes under load in production. This post covers every step from local model to cloud-ready API.' },
+      { type: 'h2', text: 'Why ResNet50?' },
+      { type: 'p', text: 'The Plant Disease Detection task (38 classes from PlantVillage) needs a model that generalises well across leaf textures, lighting conditions, and disease morphology. ResNet50\'s skip connections prevent vanishing gradients in deeper layers — critical for fine-grained visual classification where subtle texture differences matter.' },
+      { type: 'p', text: 'I fine-tuned a pretrained ImageNet ResNet50, freezing all layers except the last two residual blocks + the final FC layer. This transfer learning approach reached convergence in 8 epochs instead of 40+ from scratch.' },
+      { type: 'h2', text: 'FastAPI: The Right Tool for ML Serving' },
+      { type: 'p', text: 'FastAPI\'s async support and automatic OpenAPI documentation make it ideal for ML APIs. The key: load the model once at startup, not per request.' },
+      { type: 'code', lang: 'python', text: `from fastapi import FastAPI, UploadFile, File
+from contextlib import asynccontextmanager
+import torch, torchvision.transforms as T
+from PIL import Image
+import io
+
+# Global model (loaded once at startup)
+model = None
+transform = T.Compose([
+    T.Resize((224, 224)),
+    T.ToTensor(),
+    T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+])
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global model
+    model = torch.load("resnet50_plant.pth", map_location="cpu")
+    model.eval()
+    yield
+
+app = FastAPI(lifespan=lifespan)
+
+@app.post("/predict")
+async def predict(file: UploadFile = File(...)):
+    img = Image.open(io.BytesIO(await file.read())).convert("RGB")
+    tensor = transform(img).unsqueeze(0)
+    with torch.no_grad():
+        logits = model(tensor)
+    probs = torch.softmax(logits, dim=1)[0]
+    top3 = probs.topk(3)
+    return {
+        "prediction": CLASS_NAMES[top3.indices[0]],
+        "confidence": round(top3.values[0].item(), 4),
+        "top3": [{"class": CLASS_NAMES[i], "prob": round(p.item(), 4)}
+                 for i, p in zip(top3.indices, top3.values)]
+    }` },
+      { type: 'h2', text: 'Docker: Multi-Stage Build' },
+      { type: 'p', text: 'A naive Docker image with all PyTorch dependencies balloons to 4GB+. A multi-stage build with CPU-only PyTorch brings it under 1.2GB — a 3× reduction that matters for cloud deployment costs.' },
+      { type: 'code', lang: 'dockerfile', text: `FROM python:3.11-slim AS builder
+WORKDIR /build
+COPY requirements.txt .
+RUN pip install --user --no-cache-dir \
+    torch torchvision --index-url https://download.pytorch.org/whl/cpu \
+    && pip install --user --no-cache-dir -r requirements.txt
+
+FROM python:3.11-slim
+WORKDIR /app
+COPY --from=builder /root/.local /root/.local
+COPY . .
+ENV PATH=/root/.local/bin:$PATH
+EXPOSE 8000
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]` },
+      { type: 'h2', text: 'Preprocessing Pipeline Optimisation' },
+      { type: 'p', text: 'The bottleneck wasn\'t inference — it was image decoding. PIL is single-threaded. Under concurrent requests, decoding queued up.' },
+      { type: 'list', items: [
+        'Switched PIL decode to `torchvision.io.decode_jpeg` (uses libturbojpeg — 3× faster)',
+        'Added input validation (file size < 10MB, MIME type check) before decode',
+        'Used `torch.no_grad()` + `model.eval()` to skip gradient computation (obvious but often missed in tutorials)',
+        'Added response caching for identical image hashes (prevents redundant inference on duplicate uploads)',
+      ]},
+      { type: 'h2', text: 'Load Testing Results' },
+      { type: 'list', items: [
+        '10 concurrent requests: 210ms average response time ✓',
+        '50 concurrent requests: 890ms average — acceptable for the use case',
+        '100 concurrent requests: queue buildup — solution: Celery task queue + Redis for async processing',
+        '98.1% accuracy on 1,000 held-out test images across all 38 classes',
+      ]},
+      { type: 'tip', text: 'Always load-test your API before shipping. 100 concurrent users exposing a 10× performance cliff isn\'t a traffic problem — it\'s an architecture problem that needs fixing before launch.' },
+    ],
+  },
+
+  /* ── POST 04 ───────────────────────────────────────────────────────── */
+  {
+    slug: 'prompt-engineering-vertex-ai',
+    title: 'Prompt Engineering That Actually Works: Lessons from Vertex AI',
+    category: 'GenAI',
+    tags: ['Prompt Engineering', 'Vertex AI', 'Gemini', 'LLM', 'Google Cloud'],
+    date: 'Oct 2024',
+    readTime: '5 min read',
+    featured: false,
+    excerpt:
+      'After completing Google Cloud\'s GenAI Academy, here\'s what I wish I knew about multi-turn prompts, chain-of-thought, and structuring outputs for downstream code. No theory, just working patterns.',
+    content: [
+      { type: 'highlight', text: 'Most prompt engineering advice is theoretical. This is what I found to actually work after hands-on experimentation across Gemini Pro, Gemini Flash, and Vertex AI APIs.' },
+      { type: 'h2', text: 'Mistake 1: Vague Role Instructions' },
+      { type: 'p', text: 'Saying "You are a helpful assistant" accomplishes nothing. The model already knows that. What it needs is domain expertise framing + output format expectations.' },
+      { type: 'list', items: [
+        '❌ "You are a helpful assistant. Answer my question about Python."',
+        '✅ "You are a senior Python engineer specialising in FastAPI and async programming. Answer in concise technical language. Include code examples. Format code in fenced blocks with language tags."',
+      ]},
+      { type: 'h2', text: 'Mistake 2: One-Shot When You Need Few-Shot' },
+      { type: 'p', text: 'For structured extraction tasks (JSON output, table parsing, classification), 3 good examples in the prompt outperform elaborate instructions almost every time. The model learns the pattern implicitly.' },
+      { type: 'code', lang: 'python', text: `prompt = """Extract structured data from resume text. Return JSON only.
+
+Example 1:
+Input: "Saurabh Salve | Python, FastAPI | IBM 2024"
+Output: {"name": "Saurabh Salve", "skills": ["Python", "FastAPI"], "company": "IBM"}
+
+Example 2:
+Input: "Alice Chen | React, Node.js | Google 2023"
+Output: {"name": "Alice Chen", "skills": ["React", "Node.js"], "company": "Google"}
+
+Now extract from:
+{resume_text}"""` },
+      { type: 'h2', text: 'Chain-of-Thought: When and How' },
+      { type: 'p', text: 'CoT ("Think step by step") helps for reasoning tasks. But naively appending it to every prompt wastes tokens on simple tasks. The rule I follow: use CoT when the task requires more than 2 logical steps. Skip it for pure extraction or classification.' },
+      { type: 'p', text: 'For Vertex AI (Gemini Pro), structured CoT with explicit step labels outperformed unstructured "think step by step":' },
+      { type: 'code', lang: 'python', text: `cot_prompt = """Analyse this code for bugs. Use this structure:
+STEP 1 - Understand the code's intent
+STEP 2 - Check for common Python pitfalls
+STEP 3 - Verify edge cases (None, empty, overflow)
+STEP 4 - Provide final verdict and fix
+
+Code:
+{code}"""` },
+      { type: 'h2', text: 'Structured Outputs for Downstream Code' },
+      { type: 'p', text: 'If you\'re using LLM output in code, always enforce JSON schema. Parsing free-text LLM output is a maintenance nightmare. Vertex AI\'s `response_schema` parameter (or OpenAI\'s `response_format`) is the right abstraction.' },
+      { type: 'code', lang: 'python', text: `from google.generativeai import GenerativeModel
+import typing_extensions as typing
+
+class BlogPost(typing.TypedDict):
+    title: str
+    tags: list[str]
+    summary: str
+    word_count: int
+
+model = GenerativeModel("gemini-1.5-flash")
+result = model.generate_content(
+    prompt,
+    generation_config={"response_mime_type": "application/json",
+                       "response_schema": BlogPost}
+)` },
+      { type: 'h2', text: 'Multi-Turn Conversation: Keep Context Lean' },
+      { type: 'p', text: 'In multi-turn prompts, every previous message is re-sent as context. With long conversations, you hit context limits and costs explode. My approach: after turn 5, summarise the conversation history into a single "Context so far" block and drop individual turns.' },
+      { type: 'tip', text: 'The single most impactful prompt improvement: add "Do not hallucinate. If you don\'t know, say UNKNOWN." It reduces confident wrong answers by ~40% on factual queries.' },
+    ],
+  },
+
+  /* ── POST 05 ───────────────────────────────────────────────────────── */
+  {
+    slug: 'aws-lambda-etl-10k-events',
+    title: 'AWS Lambda for ETL: Processing 10K Events/Day Serverlessly',
+    category: 'Cloud / MLOps',
+    tags: ['AWS Lambda', 'ETL', 'Docker', 'CI/CD', 'Serverless'],
+    date: 'Aug 2023',
+    readTime: '7 min read',
+    featured: false,
+    excerpt:
+      'During my AWS internship I built a pipeline that processed 10K+ daily events with Lambda + CodePipeline. Here\'s the architecture, the pain points with cold starts, and what I\'d do differently.',
+    content: [
+      { type: 'highlight', text: 'Serverless sounds magical until you hit cold starts, timeout limits, and deployment package size restrictions. Here\'s the real-world picture.' },
+      { type: 'h2', text: 'Architecture Overview' },
+      { type: 'p', text: 'The pipeline\'s job: ingest raw event data (API calls, clickstream, system logs) from S3, transform it (clean, enrich, aggregate), and load into a data warehouse (Redshift) for BI reporting. 10K+ events/day across 6 event types.' },
+      { type: 'list', items: [
+        'Source: S3 event notifications trigger Lambda on new file upload',
+        'Transform Lambda: pandas + custom business rules (Python 3.11)',
+        'Dead letter queue: SQS DLQ for failed transformations',
+        'Load: boto3 Redshift Data API (no VPC complexity)',
+        'Orchestration: AWS CodePipeline for code deployments',
+        'Monitoring: CloudWatch metrics + custom Slack alerting Lambda',
+      ]},
+      { type: 'h2', text: 'Lambda Configuration That Matters' },
+      { type: 'p', text: 'Lambda\'s default 128MB memory is a trap for pandas workloads. Memory also controls CPU allocation (proportionally). I settled on 1024MB — 4× the default, but pandas transforms ran 6× faster.' },
+      { type: 'code', lang: 'python', text: `# lambda_function.py
+import json, boto3, pandas as pd
+from io import StringIO
+
+s3 = boto3.client('s3')
+redshift_data = boto3.client('redshift-data')
+
+def lambda_handler(event, context):
+    # Parse S3 trigger
+    bucket = event['Records'][0]['s3']['bucket']['name']
+    key = event['Records'][0]['s3']['object']['key']
+
+    # Read raw data
+    obj = s3.get_object(Bucket=bucket, Key=key)
+    df = pd.read_csv(StringIO(obj['Body'].read().decode('utf-8')))
+
+    # Transform
+    df = transform(df)
+
+    # Load to Redshift
+    redshift_data.execute_statement(
+        ClusterIdentifier=os.environ['CLUSTER_ID'],
+        Database='analytics',
+        Sql=build_copy_sql(df),
+        SecretArn=os.environ['SECRET_ARN'],
+    )
+    return {'statusCode': 200, 'processed': len(df)}` },
+      { type: 'h2', text: 'Cold Start Mitigation' },
+      { type: 'p', text: 'Pandas cold start: ~3.2 seconds for a 1024MB Lambda with pandas + numpy. Unacceptable for synchronous APIs, acceptable for async ETL. I used two strategies to reduce impact:' },
+      { type: 'list', items: [
+        'Provisioned concurrency for the first Lambda in the chain (always warm, costs ~$12/month)',
+        'EventBridge "ping" rule: fires a keep-alive invocation every 5 minutes for non-provisioned Lambdas during business hours',
+        'Layered dependencies: pandas/numpy in a separate Lambda Layer, reducing deployment package size from 45MB to 8MB (faster cold start)',
+      ]},
+      { type: 'h2', text: 'What I\'d Do Differently' },
+      { type: 'list', items: [
+        'Replace pandas with Polars for transformations — 3× faster, better memory usage, same API familiarity',
+        'Use AWS Glue for heavy ETL (>100K events) — Lambda\'s 15-minute timeout is a hard ceiling',
+        'Add idempotency keys — Lambda retries on failure, and duplicate processing caused duplicate Redshift rows we had to deduplicate downstream',
+        'S3 Select to filter data before download — reading 500MB CSV to transform 50MB of relevant rows is wasteful',
+      ]},
+      { type: 'tip', text: 'Lambda memory is the most impactful config knob for data workloads. Always benchmark at 128MB, 512MB, and 1024MB. The cost increase from 128→1024 is offset by 3-8× faster execution (you pay for GB-seconds, not just memory).' },
+    ],
+  },
+
+  /* ── POST 06 ───────────────────────────────────────────────────────── */
+  {
+    slug: 'hackathon-postmortem-genai-exchange',
+    title: 'Hackathon Post-Mortem: GenAI Exchange Top 5%',
+    category: 'Project Log',
+    tags: ['Hackathon', 'GenAI', 'Multi-Agent', 'Google Cloud', 'Vertex AI'],
+    date: 'Sep 2024',
+    readTime: '9 min read',
+    featured: false,
+    excerpt:
+      'What we built, how we planned it, the 2 AM bug that almost killed us, and what made it land in the top 5%. An honest breakdown of the entire GenAI Exchange Hackathon journey.',
+    content: [
+      { type: 'highlight', text: 'Top 5% nationwide out of hundreds of teams. This is the honest account — the wins, the panic, and the things that almost didn\'t work.' },
+      { type: 'h2', text: 'The Idea' },
+      { type: 'p', text: 'GenAI Exchange (Google/Hack2Skill) prompt: "Build something that uses Generative AI to solve a real problem." Vague, intentionally. After 30 minutes of brainstorming, we landed on: AI-assisted artisan marketplace.' },
+      { type: 'p', text: 'The problem: India has millions of traditional artisans. Their craft doesn\'t reach global buyers because they have no digital presence, no product descriptions, no marketing. Our solution: take a photo of a craft → AI generates product story, pricing estimate, cultural context, and social media content. Artisans with zero tech literacy could participate.' },
+      { type: 'h2', text: 'Day 1: Architecture Planning (8 Hours)' },
+      { type: 'p', text: 'We spent the first 8 hours not writing a line of code. Architecture decisions made in hour 1 that paid off in hour 36:' },
+      { type: 'list', items: [
+        'Vertex AI Gemini Pro Vision for image understanding (runs on Google Cloud — fits the hackathon theme)',
+        'FastAPI backend (team knew it, fast to prototype)',
+        'React frontend with Tailwind (simplest to deploy to Netlify)',
+        'Firebase for auth + Firestore for submissions (zero-config backend)',
+        'Cloud Run for the API (auto-scales, managed HTTPS)',
+      ]},
+      { type: 'h2', text: 'Day 2: The Build Sprint (18 Hours)' },
+      { type: 'p', text: 'Each team member owned a vertical: I owned the Gemini Vision pipeline + multi-agent content generation. The pipeline: image upload → Gemini Vision analysis → parallel agents for story, pricing, and social content → assembled response.' },
+      { type: 'code', lang: 'python', text: `async def generate_artisan_content(image_bytes: bytes, craft_type: str):
+    # Step 1: Visual analysis
+    analysis = await gemini_vision_analyze(image_bytes)
+
+    # Step 2: Parallel content generation
+    story, pricing, social = await asyncio.gather(
+        generate_cultural_story(analysis, craft_type),
+        estimate_pricing(analysis, craft_type),
+        generate_social_content(analysis),
+    )
+    return {"story": story, "pricing": pricing, "social": social}` },
+      { type: 'h2', text: 'The 2 AM Bug' },
+      { type: 'p', text: 'At 2 AM, 10 hours before the submission deadline, the demo broke. The Gemini Vision API was returning truncated responses on large images (>2MB). Our UI was trying to parse incomplete JSON and silently failing — showing empty product cards.' },
+      { type: 'p', text: 'Root cause: Vertex AI had a 10-second timeout for synchronous responses. Large image analysis was consistently hitting 11-12 seconds. The fix: stream the response and parse incrementally. Time to fix: 45 minutes. Time we lost to debugging the wrong thing first: 2 hours.' },
+      { type: 'h2', text: 'What Made It Land in the Top 5%' },
+      { type: 'p', text: 'Judges\' feedback (paraphrased): "Real problem, real solution, working demo." Many teams had compelling ideas but incomplete demos. We prioritised a working core over ambitious incomplete features.' },
+      { type: 'list', items: [
+        'Working end-to-end demo with real artisan images (not synthetic)',
+        'Cultural context in the AI stories — judges specifically called this out',
+        'Live deployment to Cloud Run (accessible URL, not localhost screenshots)',
+        'Clear problem-solution framing in the 3-minute pitch',
+      ]},
+      { type: 'h2', text: 'Key Takeaways' },
+      { type: 'list', items: [
+        'Ship a working core before adding features. A demo that works at 70% scope beats a broken demo at 100% scope every time.',
+        'Error handling before the final hour. We added it at midnight. Should have been day 1.',
+        'Practice the demo under realistic conditions (slow internet, non-dev images). We discovered 2 edge cases during dry-run that would have crashed the live demo.',
+        'The pitch matters as much as the code. Engineers underinvest in story. Judges are human.',
+      ]},
+    ],
+  },
+]
+
+export function getPost(slug) {
+  return BLOG_POSTS.find((p) => p.slug === slug) ?? null
+}
