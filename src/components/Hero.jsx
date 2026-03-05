@@ -1,15 +1,10 @@
 import { Link } from 'react-router-dom'
-import { useEffect, useRef } from 'react'
-
-const stats = [
-  { num: '98%',   label: 'Model Accuracy' },
-  { num: '10x',   label: 'Faster Inference' },
-  { num: 'Top 5%', label: 'GenAI Hackathon' },
-  { num: '1.2K+', label: 'LinkedIn Followers' },
-]
+import { useEffect, useRef, useState } from 'react'
 
 export default function Hero() {
-  const canvasRef = useRef(null)
+  const canvasRef   = useRef(null)
+  const [photoLoaded, setPhotoLoaded] = useState(false)
+  const [photoError,  setPhotoError]  = useState(false)
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -89,9 +84,17 @@ export default function Hero() {
 
           <div className="hero-actions">
             <Link to="/projects" className="btn-primary">View Projects</Link>
-            <Link to="/about"    className="btn-ghost">About Me</Link>
-            <Link to="/skills"   className="btn-ghost btn-ghost-green">Skills →</Link>
-            <Link to="/contact"  className="btn-ghost">Get In Touch</Link>
+            <Link to="/about"    className="btn-ghost btn-ghost-purple">About Me</Link>
+            <Link to="/skills"   className="btn-ghost">Skills →</Link>
+            <Link to="/contact"  className="btn-ghost btn-ghost-orange">Get In Touch</Link>
+            <Link to="/blog" className="btn-ghost btn-ghost-green btn-blog-cta">
+              Read Blog
+              <span className="blog-cta-arrows" aria-hidden="true">
+                <span className="blog-cta-arrow">→</span>
+                <span className="blog-cta-arrow">→</span>
+                <span className="blog-cta-arrow">→</span>
+              </span>
+            </Link>
           </div>
         </div>
 
@@ -116,15 +119,19 @@ export default function Hero() {
               src="/profile.jpg"
               alt="Saurabh Salve"
               className="hero-photo-img"
-              onError={(e) => { e.currentTarget.style.display = 'none' }}
+              onLoad={() => setPhotoLoaded(true)}
+              onError={() => setPhotoError(true)}
+              style={{ display: photoError ? 'none' : 'block' }}
             />
 
-            {/* Placeholder shown when no photo is present */}
-            <div className="hero-photo-placeholder" aria-hidden="true">
-              <div className="hero-photo-grid-overlay" />
-              <span className="hero-photo-initials">SS</span>
-              <span className="hero-photo-id-label">AI_ENG_001</span>
-            </div>
+            {/* Placeholder — shown until real photo loads */}
+            {(!photoLoaded || photoError) && (
+              <div className="hero-photo-placeholder" aria-hidden="true">
+                <div className="hero-photo-grid-overlay" />
+                <span className="hero-photo-initials">SS</span>
+                <span className="hero-photo-id-label">AI_ENG_001</span>
+              </div>
+            )}
           </div>
 
           {/* Status badge */}
@@ -132,14 +139,6 @@ export default function Hero() {
         </div>
       </div>
 
-      <div className="hero-stats">
-        {stats.map((s) => (
-          <div className="stat" key={s.label}>
-            <div className="stat-num">{s.num}</div>
-            <div className="stat-label">{s.label}</div>
-          </div>
-        ))}
-      </div>
     </section>
   )
 }

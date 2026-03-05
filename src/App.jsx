@@ -6,6 +6,7 @@ import Cursor from './components/Cursor'
 import Navbar from './components/Navbar'
 import Hero from './components/Hero'
 import About from './components/About'
+import Journey from './components/Journey'
 import Experience from './components/Experience'
 import Projects from './components/Projects'
 import Certifications from './components/Certifications'
@@ -17,12 +18,13 @@ import Skills from './pages/Skills'
 import BlogList from './pages/BlogList'
 import BlogPost from './pages/BlogPost'
 
-/* Home page — Hero + Experience + Certifications + Achievements + Education */
+/* Home page — Hero + Journey + Experience + Certifications + Achievements + Education */
 function HomePage() {
   useScrollReveal()
   return (
     <>
       <Hero />
+      <Journey />
       <Experience />
       <Certifications />
       <Achievements />

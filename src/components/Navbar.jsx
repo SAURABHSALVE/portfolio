@@ -4,6 +4,7 @@ import ThemeToggle from './ThemeToggle'
 
 /* Home-page sections accessible via hash scroll */
 const HOME_SECTIONS = [
+  { hash: 'journey',        label: 'Journey' },
   { hash: 'experience',     label: 'Experience' },
   { hash: 'certifications', label: 'Certs' },
   { hash: 'achievements',   label: 'Achievements' },

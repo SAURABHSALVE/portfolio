@@ -606,12 +606,33 @@ nav.nav-scrolled::after {
   color: var(--accent3) !important;
   border-color: rgba(0,255,157,0.3) !important;
 }
-
 .btn-ghost-green:hover {
   border-color: var(--accent3) !important;
   background: var(--accent3-dim) !important;
   box-shadow: 0 0 15px rgba(0,255,157,0.15) !important;
   color: var(--accent3) !important;
+}
+
+.btn-ghost-purple {
+  color: var(--accent4) !important;
+  border-color: rgba(191,0,255,0.3) !important;
+}
+.btn-ghost-purple:hover {
+  border-color: var(--accent4) !important;
+  background: var(--accent4-dim) !important;
+  box-shadow: 0 0 15px rgba(191,0,255,0.15) !important;
+  color: var(--accent4) !important;
+}
+
+.btn-ghost-orange {
+  color: var(--accent2) !important;
+  border-color: rgba(255,107,53,0.3) !important;
+}
+.btn-ghost-orange:hover {
+  border-color: var(--accent2) !important;
+  background: var(--accent2-dim) !important;
+  box-shadow: 0 0 15px rgba(255,107,53,0.15) !important;
+  color: var(--accent2) !important;
 }
 
 /* ============================================================
@@ -732,9 +753,48 @@ nav.nav-scrolled::after {
 
 .hero-actions {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
   animation: fadeUp 0.6s 0.3s ease both;
+}
+
+/* Compact sizing — all 5 hero buttons on one row */
+.hero-actions .btn-primary,
+.hero-actions .btn-ghost {
+  padding: 9px 14px;
+  font-size: 0.67rem;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+/* ── Blog CTA button — emphasized with pulsing glow + animated arrows ── */
+.btn-blog-cta {
+  animation: blogBtnGlow 2.8s ease-in-out infinite;
+  font-weight: 700 !important;
+}
+
+@keyframes blogBtnGlow {
+  0%, 100% { box-shadow: 0 0 0px rgba(0,255,157,0); }
+  50%       { box-shadow: 0 0 16px rgba(0,255,157,0.3), 0 0 32px rgba(0,255,157,0.1); }
+}
+
+.blog-cta-arrows {
+  display: inline-flex;
+  gap: 0px;
+  margin-left: 3px;
+}
+
+.blog-cta-arrow {
+  display: inline-block;
+  animation: arrowChase 1.3s ease-in-out infinite;
+}
+
+.blog-cta-arrow:nth-child(2) { animation-delay: 0.18s; }
+.blog-cta-arrow:nth-child(3) { animation-delay: 0.36s; }
+
+@keyframes arrowChase {
+  0%, 60%, 100% { transform: translateX(0);   opacity: 0.35; }
+  30%            { transform: translateX(5px); opacity: 1; }
 }
 
 .hero-stats {
@@ -3219,8 +3279,9 @@ footer {
 
   .hero-h1 { font-size: clamp(2.4rem, 12vw, 3.5rem); }
 
-  .hero-actions { flex-direction: column; align-items: flex-start; gap: 10px; }
-  .btn-primary, .btn-ghost { width: 100%; justify-content: center; }
+  .hero-actions { flex-wrap: wrap; gap: 8px; }
+  .hero-actions .btn-primary,
+  .hero-actions .btn-ghost { flex: 1 1 calc(50% - 4px); justify-content: center; min-width: 130px; }
 
   .hero-stats {
     flex-direction: row;
@@ -4155,7 +4216,7 @@ footer.footer-full::before {
 }
 
 .hero-inner .hero-content {
-  max-width: 560px;
+  max-width: 660px;   /* wide enough for 5 hero buttons on one row */
 }
 
 /* ── Photo wrap ── */
@@ -4441,6 +4502,342 @@ footer.footer-full::before {
 .btn-social-linkedin:hover { border-color: #0077b5; color: #0077b5; box-shadow: 0 4px 14px rgba(0,119,181,0.2); }
 .btn-social-github:hover   { border-color: var(--text); color: var(--text); box-shadow: 0 4px 14px rgba(255,255,255,0.08); }
 .btn-social-email:hover    { border-color: #ea4335; color: #ea4335; box-shadow: 0 4px 14px rgba(234,67,53,0.2); }
+
+/* ============================================================
+   JOURNEY — FLOW TIMELINE
+   ============================================================ */
+.journey-intro {
+  font-size: clamp(0.95rem, 2vw, 1.08rem);
+  color: var(--text2);
+  line-height: 1.85;
+  max-width: 620px;
+  margin-bottom: 56px;
+  padding-left: 20px;
+  border-left: 3px solid var(--accent);
+  font-style: italic;
+}
+
+/* ── Outer flow column ── */
+.journey-flow {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 60px;
+}
+
+/* Each step: [track] [card] */
+.journey-step {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  align-items: start;
+  gap: 0 24px;
+}
+
+/* ── Track (circle + connector line) ── */
+.journey-track {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 22px;
+}
+
+.journey-phase-circle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 900;
+  color: var(--bg);
+  flex-shrink: 0;
+  z-index: 1;
+  position: relative;
+  transition: transform 0.3s;
+}
+
+.journey-step:hover .journey-phase-circle { transform: scale(1.12); }
+
+.journey-track-line {
+  width: 2px;
+  flex: 1;
+  min-height: 56px;
+  margin-top: 10px;
+  border-radius: 1px;
+}
+
+/* ── Step card ── */
+.journey-step-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--jc, var(--accent));
+  padding: 24px 28px 26px;
+  margin-bottom: 28px;
+  position: relative;
+  overflow: hidden;
+  clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%);
+  transition: box-shadow 0.35s, transform 0.35s;
+}
+
+.journey-step-card:hover {
+  transform: translateX(4px);
+  box-shadow: -4px 0 0 var(--jc, var(--accent)), 0 12px 40px rgba(0,0,0,0.35);
+}
+
+/* Big ghost number background decoration */
+.journey-card-bg-num {
+  position: absolute;
+  top: -16px;
+  right: 20px;
+  font-family: var(--font-mono);
+  font-size: 8rem;
+  font-weight: 900;
+  color: var(--jc, var(--accent));
+  opacity: 0.04;
+  line-height: 1;
+  user-select: none;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+
+.journey-step-card:hover .journey-card-bg-num { opacity: 0.07; }
+
+/* Top meta row */
+.journey-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.journey-card-pills {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.journey-year-pill {
+  font-family: var(--font-mono);
+  font-size: 0.52rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  padding: 3px 10px;
+  border: 1px solid;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.journey-period-pill {
+  font-family: var(--font-mono);
+  font-size: 0.52rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+}
+
+.journey-phase-tag {
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+}
+
+.journey-step-title {
+  font-size: clamp(1.05rem, 2.5vw, 1.25rem);
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 14px;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+}
+
+.journey-step-body {
+  font-size: 0.9rem;
+  color: var(--text2);
+  line-height: 1.9;
+  margin-bottom: 20px;
+}
+
+.journey-step-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.journey-step-tag {
+  font-family: var(--font-mono);
+  font-size: 0.54rem;
+  font-weight: 600;
+  padding: 3px 9px;
+  border: 1px solid;
+  border-radius: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.8;
+  transition: opacity 0.2s, background 0.2s;
+  background: transparent;
+}
+
+.journey-step-tag:hover { opacity: 1; background: rgba(255,255,255,0.04); }
+
+/* ── End node ── */
+.journey-end-node {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-left: 18px;
+  margin-top: -8px;
+  margin-bottom: 8px;
+}
+
+.journey-end-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent3);
+  box-shadow: 0 0 14px var(--accent3);
+  flex-shrink: 0;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+.journey-end-label {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--accent3);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+/* ── Identity closing card ── */
+.journey-identity {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  padding: 36px 40px;
+  position: relative;
+  overflow: hidden;
+  clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 20px 100%, 0 calc(100% - 20px));
+}
+
+/* Animated multi-color top stripe */
+.journey-identity::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg,
+    var(--accent), var(--accent2), var(--accent3), var(--accent4), var(--accent));
+  background-size: 300% 100%;
+  animation: gradientShift 4s linear infinite;
+}
+
+@keyframes gradientShift {
+  from { background-position: 0% 50%; }
+  to   { background-position: 300% 50%; }
+}
+
+.journey-identity::after {
+  content: '';
+  position: absolute;
+  bottom: 0; right: 0;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(ellipse at bottom right, rgba(0,212,255,0.05), transparent 70%);
+  pointer-events: none;
+}
+
+.journey-id-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 28px;
+}
+
+.journey-id-sys {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--accent);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.journey-id-blink {
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  animation: blink 1s step-end infinite;
+}
+
+.journey-id-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px 48px;
+  margin-bottom: 32px;
+}
+
+.journey-id-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: fadeUp 0.5s both;
+}
+
+.journey-id-prompt {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-weight: 900;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.journey-id-always {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.journey-id-role {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.journey-id-quote {
+  font-size: 0.92rem;
+  color: var(--text2);
+  font-style: italic;
+  line-height: 1.75;
+  border-top: 1px solid var(--border);
+  padding-top: 20px;
+  margin: 0;
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Responsive ── */
+@media (max-width: 700px) {
+  .journey-step { grid-template-columns: 44px 1fr; gap: 0 16px; }
+  .journey-phase-circle { width: 36px; height: 36px; font-size: 0.66rem; }
+  .journey-step-card { padding: 18px 18px 20px; margin-bottom: 20px; clip-path: none; }
+  .journey-identity { padding: 24px 20px; clip-path: none; }
+  .journey-id-grid { grid-template-columns: 1fr; gap: 12px; }
+  .journey-id-role { font-size: 0.88rem; }
+  .journey-card-bg-num { font-size: 5rem; }
+}
+
+@media (max-width: 420px) {
+  .journey-step { grid-template-columns: 36px 1fr; gap: 0 12px; }
+  .journey-card-top { flex-direction: column; align-items: flex-start; }
+}
 
 /* ============================================================
    STANDALONE PAGE WRAPPER (About / Projects / Contact)
