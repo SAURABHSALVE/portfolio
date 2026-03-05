@@ -65,30 +65,70 @@ export default function Hero() {
       <div className="hud-corner hud-tl" aria-hidden="true" />
       <div className="hud-corner hud-br" aria-hidden="true" />
 
-      <div className="hero-content">
-        <div className="hero-tag">
-          <span className="avail-dot" />
-          &nbsp;SYS_STATUS: Available for opportunities
+      <div className="hero-inner">
+        {/* ── Left: text content ── */}
+        <div className="hero-content">
+          <div className="hero-tag">
+            <span className="avail-dot" />
+            &nbsp;SYS_STATUS: Available for opportunities
+          </div>
+
+          <div className="hero-role-label">AI &amp; ML Engineer</div>
+
+          <h1 className="hero-h1">
+            <span>Saurabh</span>
+            <span className="name-outline" data-text="Salve">Salve</span>
+          </h1>
+
+          <p className="hero-desc">
+            Specializing in <strong>Generative AI, LLMs &amp; Agentic Workflows</strong>.
+            Building production-ready systems with{' '}
+            <strong>RAG pipelines, multi-agent architectures,</strong> and scalable cloud
+            infrastructure.<span className="cursor-blink">_</span>
+          </p>
+
+          <div className="hero-actions">
+            <Link to="/projects" className="btn-primary">View Projects</Link>
+            <Link to="/about"    className="btn-ghost">About Me</Link>
+            <Link to="/skills"   className="btn-ghost btn-ghost-green">Skills →</Link>
+            <Link to="/contact"  className="btn-ghost">Get In Touch</Link>
+          </div>
         </div>
 
-        <div className="hero-role-label">AI &amp; ML Engineer</div>
+        {/* ── Right: profile photo ── */}
+        <div className="hero-photo-wrap">
+          <div className="hero-photo-frame">
+            {/* Animated scan line */}
+            <div className="hero-photo-scan" aria-hidden="true" />
 
-        <h1 className="hero-h1">
-          <span>Saurabh</span>
-          <span className="name-outline" data-text="Salve">Salve</span>
-        </h1>
+            {/* HUD corner brackets */}
+            <span className="hero-photo-corner tl" aria-hidden="true" />
+            <span className="hero-photo-corner tr" aria-hidden="true" />
+            <span className="hero-photo-corner bl" aria-hidden="true" />
+            <span className="hero-photo-corner br" aria-hidden="true" />
 
-        <p className="hero-desc">
-          Specializing in <strong>Generative AI, LLMs &amp; Agentic Workflows</strong>.
-          Building production-ready systems with{' '}
-          <strong>RAG pipelines, multi-agent architectures,</strong> and scalable cloud
-          infrastructure.<span className="cursor-blink">_</span>
-        </p>
+            {/*
+              ── PROFILE PHOTO ──
+              Replace src="/profile.jpg" with your actual image path.
+              The placeholder below auto-hides once the image loads.
+            */}
+            <img
+              src="/profile.jpg"
+              alt="Saurabh Salve"
+              className="hero-photo-img"
+              onError={(e) => { e.currentTarget.style.display = 'none' }}
+            />
 
-        <div className="hero-actions">
-          <Link to="/projects" className="btn-primary">View Projects</Link>
-          <Link to="/contact" className="btn-ghost">Get In Touch</Link>
-          <Link to="/blog" className="btn-ghost btn-ghost-green">Read Blog →</Link>
+            {/* Placeholder shown when no photo is present */}
+            <div className="hero-photo-placeholder" aria-hidden="true">
+              <div className="hero-photo-grid-overlay" />
+              <span className="hero-photo-initials">SS</span>
+              <span className="hero-photo-id-label">AI_ENG_001</span>
+            </div>
+          </div>
+
+          {/* Status badge */}
+          <div className="hero-photo-badge">IDENTITY_VERIFIED</div>
         </div>
       </div>
 

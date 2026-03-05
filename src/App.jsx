@@ -1,5 +1,5 @@
-import { Routes, Route, useLocation } from 'react-router-dom'
-import { useEffect, useRef } from 'react'
+import { Routes, Route, useLocation, useNavigate } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
 import { useScrollReveal } from './hooks/useScrollReveal'
 import { ThemeProvider } from './context/ThemeContext'
 import Cursor from './components/Cursor'
@@ -57,12 +57,46 @@ function ScrollToTop() {
   return null
 }
 
+/* Floating back-to-top / go-home button */
+function FloatHomeBtn() {
+  const [show, setShow]   = useState(false)
+  const location          = useLocation()
+  const navigate          = useNavigate()
+  const isHome            = location.pathname === '/'
+
+  useEffect(() => {
+    if (!isHome) { setShow(true); return }
+    const onScroll = () => setShow(window.scrollY > 350)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    onScroll()
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [isHome])
+
+  const handleClick = () => {
+    if (isHome) window.scrollTo({ top: 0, behavior: 'smooth' })
+    else navigate('/')
+  }
+
+  return (
+    <button
+      className={`float-home-btn${show ? ' float-home-btn--show' : ''}`}
+      onClick={handleClick}
+      aria-label={isHome ? 'Scroll to top' : 'Go to home page'}
+      title={isHome ? 'Back to top' : 'Home'}
+    >
+      <span className="float-home-icon">{isHome ? '↑' : '⌂'}</span>
+      <span className="float-home-label">{isHome ? 'Top' : 'Home'}</span>
+    </button>
+  )
+}
+
 export default function App() {
   return (
     <ThemeProvider>
       <Cursor />
       <Navbar />
       <ScrollToTop />
+      <FloatHomeBtn />
       <Routes>
         <Route path="/"           element={<HomePage />} />
         <Route path="/about"      element={<PageFrame><div className="page-top-pad"><About /></div></PageFrame>} />
