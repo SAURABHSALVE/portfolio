@@ -1,18 +1,24 @@
 const achievements = [
   {
     icon: '🏆',
+    org: 'Google · Hack2Skill',
     title: 'National Finalist — GenAI Exchange Hackathon',
-    desc: 'Top 5% of participants nationwide. Recognized for innovative generative AI application in the Google-backed hackathon hosted by Hack2Skill.',
+    desc: 'Top 5% of participants nationwide. Recognized for innovative generative AI application in the Google-backed hackathon.',
+    stat: 'Top 5%',
   },
   {
     icon: '🎯',
+    org: 'OpenAI · NxtWave',
     title: 'OpenAI Buildathon — Project Selected',
-    desc: 'Project selected for the OpenAI Buildathon hosted by Next Wave, competing among the best AI builders across India.',
+    desc: 'Project selected for the OpenAI Buildathon, competing among the best AI builders across India.',
+    stat: 'Selected',
   },
   {
     icon: '⚡',
-    title: 'GenAI Artisans — Hackathon Finalist',
-    desc: 'Recognized for innovative use of Agentic AI workflows. Built and demoed a full multi-agent system under live hackathon conditions.',
+    org: 'GenAI Artisans',
+    title: 'Hackathon Finalist — Agentic AI',
+    desc: 'Recognized for innovative use of Agentic AI workflows. Built and demoed a full multi-agent system under live conditions.',
+    stat: 'Finalist',
   },
 ]
 
@@ -24,12 +30,17 @@ export default function Achievements() {
         <h2>Achievements</h2>
         <div className="section-line" />
       </div>
-      <div className="achieve-grid">
-        {achievements.map((a) => (
-          <div className="achieve-card reveal" key={a.title}>
-            <div className="achieve-icon">{a.icon}</div>
-            <div className="achieve-title">{a.title}</div>
-            <div className="achieve-desc">{a.desc}</div>
+      <div className="ach-grid">
+        {achievements.map((a, i) => (
+          <div className="ach-card reveal" key={a.title}>
+            <div className="ach-card-header">
+              <span className="ach-icon">{a.icon}</span>
+              <span className="ach-stat">{a.stat}</span>
+            </div>
+            <div className="ach-org">{a.org}</div>
+            <div className="ach-title">{a.title}</div>
+            <div className="ach-desc">{a.desc}</div>
+            <div className="ach-index">ACH_0{i + 1}</div>
           </div>
         ))}
       </div>

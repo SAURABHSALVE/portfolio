@@ -1,16 +1,20 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { BLOG_POSTS } from '../data/blogData'
 import { useScrollReveal } from '../hooks/useScrollReveal'
 import Footer from '../components/Footer'
 
-const FILTERS = [
-  { key: 'all',        label: 'All Posts' },
-  { key: 'GenAI',      label: 'GenAI' },
-  { key: 'Machine Learning', label: 'Machine Learning' },
-  { key: 'Cloud / MLOps', label: 'Cloud / MLOps' },
-  { key: 'Project Log', label: 'Project Logs' },
-]
+/* Derive filters dynamically from actual blog post categories */
+const deriveFilters = () => {
+  const seen = new Set()
+  const cats = []
+  BLOG_POSTS.forEach((p) => {
+    if (!seen.has(p.category)) { seen.add(p.category); cats.push(p.category) }
+  })
+  return [{ key: 'all', label: 'All Posts' }, ...cats.map((c) => ({ key: c, label: c }))]
+}
+
+const FILTERS = deriveFilters()
 
 const LINKEDIN_POSTS = [
   {
@@ -68,11 +72,23 @@ function CategoryBadge({ cat }) {
 export default function BlogList() {
   useScrollReveal()
   const [active, setActive] = useState('all')
+  const [animKey, setAnimKey] = useState(0)
 
   const featured = BLOG_POSTS.find((p) => p.featured)
   const regular  = BLOG_POSTS.filter((p) => !p.featured)
-  const filtered = regular.filter((p) => active === 'all' || p.category === active)
+
+  /* All regular posts — use CSS to show/hide for smooth animation */
   const featuredVisible = active === 'all' || featured?.category === active
+
+  const handleFilter = (key) => {
+    setActive(key)
+    setAnimKey((k) => k + 1)   // re-trigger CSS stagger animations
+  }
+
+  /* Count per category for badge */
+  const countFor = (cat) => cat === 'all'
+    ? regular.length
+    : regular.filter((p) => p.category === cat).length
 
   return (
     <>
@@ -99,17 +115,29 @@ export default function BlogList() {
             <button
               key={f.key}
               className={`fbtn${active === f.key ? ' active' : ''}`}
-              onClick={() => setActive(f.key)}
+              onClick={() => handleFilter(f.key)}
             >
               {f.label}
+              <span className="fbtn-count">{countFor(f.key)}</span>
             </button>
           ))}
         </div>
       </div>
 
       {/* ── FEATURED POST ───────────────────────────────────────── */}
-      {featured && featuredVisible && (
-        <div className="blog-section-pad" style={{ paddingTop: 0 }}>
+      {featured && (
+        <div
+          className="blog-section-pad"
+          style={{
+            paddingTop: 0,
+            transition: 'opacity 0.35s, transform 0.35s',
+            opacity: featuredVisible ? 1 : 0,
+            transform: featuredVisible ? 'translateY(0)' : 'translateY(12px)',
+            pointerEvents: featuredVisible ? 'auto' : 'none',
+            height: featuredVisible ? 'auto' : 0,
+            overflow: 'hidden',
+          }}
+        >
           <Link to={`/blog/${featured.slug}`} className="featured-post reveal">
             <div className="fp-content">
               <div className="fp-meta">
@@ -142,14 +170,20 @@ export default function BlogList() {
         </div>
       )}
 
-      {/* ── POSTS GRID ──────────────────────────────────────────── */}
+      {/* ── POSTS GRID — all posts in DOM, CSS-filtered for smooth animation ── */}
       <div className="blog-section-pad" style={{ paddingTop: 0 }}>
-        {filtered.length === 0 ? (
-          <div className="blog-empty">No posts in this category yet.</div>
-        ) : (
-          <div className="blog-posts-grid">
-            {filtered.map((post, i) => (
-              <Link to={`/blog/${post.slug}`} className="post-card reveal" key={post.slug}>
+        <div className="blog-posts-grid" key={animKey}>
+          {regular.map((post, i) => {
+            const visible = active === 'all' || post.category === active
+            return (
+              <Link
+                to={`/blog/${post.slug}`}
+                className={`post-card blog-filter-item${visible ? ' blog-filter-visible' : ' blog-filter-hidden'}`}
+                key={post.slug}
+                style={{ '--stagger': i % 6 }}
+                tabIndex={visible ? 0 : -1}
+                aria-hidden={!visible}
+              >
                 <div className="post-meta-row">
                   <span className="post-num">POST — {String(i + 1).padStart(2, '0')}</span>
                   <span className="post-arrow">↗</span>
@@ -162,9 +196,12 @@ export default function BlogList() {
                   <span className="post-year">{post.date}</span>
                 </div>
               </Link>
-            ))}
-          </div>
-        )}
+            )
+          })}
+          {regular.filter((p) => active === 'all' || p.category === active).length === 0 && (
+            <div className="blog-empty">No posts in this category yet.</div>
+          )}
+        </div>
       </div>
 
       {/* ── LINKEDIN POSTS ──────────────────────────────────────── */}

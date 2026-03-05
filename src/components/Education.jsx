@@ -6,19 +6,21 @@ export default function Education() {
         <h2>Education</h2>
         <div className="section-line" />
       </div>
-      <div className="edu-block reveal">
-        <div>
-          <div className="edu-degree">B.Tech — Computer Science Engineering</div>
-          <div className="edu-school">
-            Deogiri Institute of Engineering and Management Studies · Aurangabad, India
+      <div className="edu-list">
+        <div className="edu-item reveal">
+          <div className="edu-year">
+            <div className="edu-year-num">2026</div>
+            <div className="edu-year-label">EXPECTED</div>
           </div>
-          <div className="edu-courses">
-            Machine Learning · Data Science · Deep Learning · Data Structures · Statistics · Algorithms
+          <div className="edu-body">
+            <div className="edu-degree">B.Tech — Computer Science Engineering</div>
+            <div className="edu-school">
+              Deogiri Institute of Engineering and Management Studies · Aurangabad, India
+            </div>
+            <div className="edu-meta">
+              Machine Learning · Data Science · Deep Learning · Data Structures · Statistics · Algorithms
+            </div>
           </div>
-        </div>
-        <div>
-          <div className="edu-year">2026</div>
-          <div className="edu-grad-label">EXPECTED GRAD</div>
         </div>
       </div>
     </section>

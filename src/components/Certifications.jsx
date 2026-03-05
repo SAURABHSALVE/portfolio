@@ -6,7 +6,7 @@ const certs = [
   { badge: '🤖', issuer: 'Krish Naik',                name: 'Machine Learning Specialization',                skills: 'Regression · Classification · Model Deployment · Scikit-learn' },
   { badge: '☁️', issuer: 'Amazon Web Services',       name: 'AWS Academy Cloud Foundations',                  skills: 'Cloud Architecture · EC2 · Lambda · Security Best Practices' },
   { badge: '👁️', issuer: 'Coursera Project Network', name: 'Facial Recognition with PyTorch',                skills: 'PyTorch · Face Detection · CNN · Computer Vision' },
-  { badge: '😊', issuer: 'Coursera Project Network', name: 'Facial Expression Recognition',                  skills: 'Emotion Detection · CNN · PyTorch · Image Classification' },
+  { badge: '😊', issuer: 'Coursera Project Network',  name: 'Facial Expression Recognition',                  skills: 'Emotion Detection · CNN · PyTorch · Image Classification' },
   { badge: '🌩️', issuer: 'ServiceNow',               name: 'Welcome to ServiceNow Micro-Cert',               skills: 'ITSM · Workflow Automation · Low-code App Engine' },
   { badge: '🧠', issuer: 'Google / Coursera',         name: 'Introduction to Generative AI',                  skills: 'GenAI Fundamentals · Text & Image Generation · Real-world Applications' },
   { badge: '⚡', issuer: 'OpenAI / NxtWave',          name: 'Generative AI Mastery Workshop',                 skills: 'GenAI Buildathon · Practical AI · Product Development' },
@@ -21,9 +21,14 @@ export default function Certifications() {
         <h2>Certifications</h2>
         <div className="section-line" />
       </div>
+      <div className="cert-count reveal">
+        <span className="cert-count-num">{certs.length}</span>
+        <span className="cert-count-label">// CREDENTIALS_LOADED</span>
+      </div>
       <div className="cert-grid">
-        {certs.map((c) => (
+        {certs.map((c, i) => (
           <div className="cert-card reveal" key={c.name}>
+            <div className="cert-index">C_{String(i + 1).padStart(2, '0')}</div>
             <div className="cert-badge">{c.badge}</div>
             <div className="cert-issuer">{c.issuer}</div>
             <div className="cert-name">{c.name}</div>

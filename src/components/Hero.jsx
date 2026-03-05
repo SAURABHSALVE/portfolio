@@ -1,36 +1,97 @@
 import { Link } from 'react-router-dom'
+import { useEffect, useRef } from 'react'
 
 const stats = [
-  { num: '98%', label: 'Model Accuracy' },
-  { num: '10x', label: 'Faster Inference' },
+  { num: '98%',   label: 'Model Accuracy' },
+  { num: '10x',   label: 'Faster Inference' },
   { num: 'Top 5%', label: 'GenAI Hackathon' },
   { num: '1.2K+', label: 'LinkedIn Followers' },
 ]
 
 export default function Hero() {
+  const canvasRef = useRef(null)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    let animId
+
+    const resize = () => {
+      canvas.width  = canvas.offsetWidth
+      canvas.height = canvas.offsetHeight
+    }
+    resize()
+
+    // Floating particles
+    const particles = Array.from({ length: 40 }, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      r: Math.random() * 1.5 + 0.5,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      alpha: Math.random() * 0.5 + 0.1,
+    }))
+
+    const draw = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      particles.forEach((p) => {
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(0,212,255,${p.alpha})`
+        ctx.fill()
+        p.x += p.vx
+        p.y += p.vy
+        if (p.x < 0 || p.x > canvas.width)  p.vx *= -1
+        if (p.y < 0 || p.y > canvas.height) p.vy *= -1
+      })
+      animId = requestAnimationFrame(draw)
+    }
+    draw()
+
+    window.addEventListener('resize', resize)
+    return () => {
+      cancelAnimationFrame(animId)
+      window.removeEventListener('resize', resize)
+    }
+  }, [])
+
   return (
     <section id="hero">
       <div className="hero-noise" />
+      <canvas ref={canvasRef} className="hero-canvas" aria-hidden="true" />
+
+      {/* HUD corner brackets */}
+      <div className="hud-corner hud-tl" aria-hidden="true" />
+      <div className="hud-corner hud-br" aria-hidden="true" />
+
       <div className="hero-content">
         <div className="hero-tag">
-          <span className="avail-dot" />&nbsp;Available for opportunities
+          <span className="avail-dot" />
+          &nbsp;SYS_STATUS: Available for opportunities
         </div>
+
+        <div className="hero-role-label">AI &amp; ML Engineer</div>
+
         <h1 className="hero-h1">
           <span>Saurabh</span>
-          <span className="name-outline">Salve</span>
+          <span className="name-outline" data-text="Salve">Salve</span>
         </h1>
+
         <p className="hero-desc">
-          <strong>AI &amp; ML Engineer</strong> specializing in Generative AI, LLMs &amp; Agentic
-          Workflows. Building production-ready systems with{' '}
+          Specializing in <strong>Generative AI, LLMs &amp; Agentic Workflows</strong>.
+          Building production-ready systems with{' '}
           <strong>RAG pipelines, multi-agent architectures,</strong> and scalable cloud
           infrastructure.<span className="cursor-blink">_</span>
         </p>
+
         <div className="hero-actions">
           <Link to="/projects" className="btn-primary">View Projects</Link>
           <Link to="/contact" className="btn-ghost">Get In Touch</Link>
           <Link to="/blog" className="btn-ghost btn-ghost-green">Read Blog →</Link>
         </div>
       </div>
+
       <div className="hero-stats">
         {stats.map((s) => (
           <div className="stat" key={s.label}>

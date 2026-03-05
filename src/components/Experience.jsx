@@ -9,6 +9,7 @@ const experiences = [
       'Collaborated cross-functionally to document ML findings clearly for non-technical stakeholders.',
     ],
     tech: ['Python', 'Scikit-learn', 'Pandas', 'Streamlit', 'Predictive Modeling'],
+    accentColor: 'cyan',
   },
   {
     date: 'Summer 2023',
@@ -20,6 +21,7 @@ const experiences = [
       'Implemented automated data processing pipelines ensuring accuracy and high availability.',
     ],
     tech: ['AWS EC2', 'AWS Lambda', 'Docker', 'CI/CD', 'Python'],
+    accentColor: 'orange',
   },
 ]
 
@@ -31,18 +33,20 @@ export default function Experience() {
         <h2>Experience</h2>
         <div className="section-line" />
       </div>
+
       <div className="exp-list">
-        {experiences.map((exp) => (
-          <div className="exp-item reveal" key={exp.role}>
-            <div>
+        {experiences.map((exp, i) => (
+          <div className={`exp-item exp-item--${exp.accentColor} reveal`} key={exp.role}>
+            <div className="exp-left">
+              <div className="exp-index">EXP_0{i + 1}</div>
               <div className="exp-date">{exp.date}</div>
               <div className="exp-company">{exp.company}</div>
             </div>
-            <div>
+            <div className="exp-right">
               <div className="exp-role">{exp.role}</div>
               <ul className="exp-points">
-                {exp.points.map((pt, i) => (
-                  <li key={i}>{pt}</li>
+                {exp.points.map((pt, j) => (
+                  <li key={j}>{pt}</li>
                 ))}
               </ul>
               <div className="exp-tech">
